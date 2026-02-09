@@ -11,8 +11,13 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      devOptions: {
+        enabled: true,
+        type: "module"
+      },
+      injectRegister: null,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      
       manifest: {
         name: 'Vite Vue PWA',
         short_name: 'VuePWA',
