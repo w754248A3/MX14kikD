@@ -2,6 +2,7 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
 import { clientsClaim } from 'workbox-core'
+import { initSwInterceptor } from '@/tools/sw-interceptor/sw-handler'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -25,3 +26,6 @@ registerRoute(
     })
   }
 )
+
+// Initialize Tool Interceptors
+initSwInterceptor()
