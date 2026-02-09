@@ -1,31 +1,29 @@
 import { createApp } from 'vue'
-import './style.css'
+import { createPinia } from 'pinia'
 import App from './App.vue'
+import router from './router'
+
+import './styles/main.css'
+
+// PWA
 import { registerSW } from 'virtual:pwa-register'
 
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
-    console.log('[PWA] New content available. Call updateSW(true) to reload.')
+    console.log('[PWA] New content available.')
   },
   onOfflineReady() {
     console.log('[PWA] App is ready to work offline.')
   },
-  onRegistered(r) {
-    console.log('[PWA] Service Worker registered')
-    if (r) {
-      console.log('[PWA] Registration scope:', r.scope)
-    }
-  },
-  onRegisterError(error) {
-    console.error('[PWA] Registration failed:', error)
-  }
 })
 
-// Expose updateSW for debugging in console
-if (import.meta.env.DEV) {
-  // @ts-expect-error - debugging purpose
-  window.updateSW = updateSW
-}
+// Log for debugging (and to use the variable)
+console.log('PWA updater initialized', updateSW)
 
-createApp(App).mount('#app')
+const app = createApp(App)
+
+app.use(createPinia())
+app.use(router)
+
+app.mount('#app')

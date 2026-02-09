@@ -1,5 +1,60 @@
-# Vue 3 + TypeScript + Vite
+# Static Toolkit Framework
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A scalable, client-side toolkit application built with Vue 3, TypeScript, and Vite.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## Features
+
+- **Extensible Architecture**: Easily add new tools by creating a folder.
+- **Dynamic Registry**: Tools are automatically discovered and registered.
+- **Offline Capable**: PWA support for offline access.
+- **Responsive Design**: Mobile-first UI with a clean styling system.
+- **Local Persistence**: "Recently Used" tools are saved in local storage.
+
+## Project Structure
+
+```
+src/
+  ├── components/    # Shared UI components
+  ├── layouts/       # Page layouts (MainLayout)
+  ├── router/        # Routing configuration
+  ├── stores/        # State management (Tool Registry)
+  ├── styles/        # Global CSS and variables
+  ├── tools/         # The collection of tools
+  │   ├── text-displayer/
+  │   └── number-calculator/
+  ├── types/         # TypeScript interfaces
+  └── views/         # Page views
+```
+
+## How to Add a New Tool
+
+1. Create a new folder in `src/tools/` (e.g., `my-tool`).
+2. Create `config.ts` inside that folder:
+   ```typescript
+   import type { ToolConfig } from '@/types/tool'
+
+   const config: ToolConfig = {
+     name: 'My Tool',
+     description: 'A short description.',
+     icon: 'Box', // Lucide icon name or Component
+     path: '/tools/my-tool',
+     category: 'My Category'
+   }
+
+   export default config
+   ```
+3. Create `index.vue` inside that folder for your tool's UI.
+4. That's it! The tool will automatically appear in the registry and list.
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# Build for production
+npm run build
+```
