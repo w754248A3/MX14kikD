@@ -3,6 +3,9 @@ import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
 import { clientsClaim } from 'workbox-core'
 import { initSwInterceptor } from '@/tools/sw-interceptor/sw-handler'
+import { initSwInterceptor as init_streaming_decryption_player} from '@/tools/streaming_decryption_player/sw-handler'
+
+
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -28,4 +31,7 @@ registerRoute(
 )
 
 // Initialize Tool Interceptors
-initSwInterceptor()
+initSwInterceptor();
+
+
+init_streaming_decryption_player();
