@@ -4,5 +4,8 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
-  "exclude": ["functions/**/*"]
+  "exclude": ["functions/**/*"],
+  "compilerOptions": {
+    "types": [ "@types/wicg-file-system-access"]
+   }
 }
