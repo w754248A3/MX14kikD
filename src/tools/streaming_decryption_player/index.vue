@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { CHANNEL_NAME, type DATA } from "@/tools/streaming_decryption_player/type"
+import { CHANNEL_NAME, VIRTUAL_URL_PATH, type DATA, type VIRTUAL_URL_SEARCH } from "@/tools/streaming_decryption_player/type"
 
 
 const video_virtualUrl = ref<string>("");
@@ -32,7 +32,10 @@ else {
     }
 }
 
+const createUrl = (urlSearch:VIRTUAL_URL_SEARCH)=>{
 
+    return `${VIRTUAL_URL_PATH}?t=${urlSearch.t}&id=${urlSearch.id}&d=${urlSearch.d}`;
+};
 
 
 const channel = new BroadcastChannel(CHANNEL_NAME);
@@ -40,11 +43,23 @@ const channel = new BroadcastChannel(CHANNEL_NAME);
 channel.onmessage = (event) => {
     const msg: DATA = event.data;
     if (msg.type === 'READY_TO_PLAY') {
-        log(`收到 READY_TO_PLAY 消息，开始播放视频`);
-        playVideo(msg.virtualUrl);
+
+        if(msg.virtualUrl.d){
+            log(`收到 READY_TO_DOWNLOAD 消息，开始download视频`);
+            triggerVirtualDownload(createUrl(msg.virtualUrl));
+        }
+        else{
+            log(`收到 READY_TO_PLAY 消息，开始播放视频`);
+            playVideo(createUrl(msg.virtualUrl));
+        }
+
+        
     }
     else if (msg.type === 'LOG_MESSAGE') {
         log(`收到SW消息: ${msg.message}`);
+    }
+    else{
+        log("error mesage from sw");
     }
 };
 
@@ -66,15 +81,13 @@ const getIncrementingID = (() => {
 
 })();
 
-const getVedioFileData = (file: File): DATA => {
-
-    const virtualUrl = `/streaming_decryption_player/virtual-video.mp4?t=${Date.now()}&id=${getIncrementingID()}`;
+const getVedioFileData = (file: File, isDownload:boolean): DATA => {
 
     return {
         type: "VIDEO_FILE_DATA",
 
         file: file,
-        virtualUrl: virtualUrl
+        virtualUrl: {t:Date.now().toString(), id:getIncrementingID().toString(), d:isDownload}
     } as DATA;
 
 };
@@ -94,7 +107,25 @@ const onFileEleChange = async (e: any) => {
     log(`已选择播放文件: ${file.name}`);
 
 
-    channel.postMessage(getVedioFileData(file));
+    channel.postMessage(getVedioFileData(file, false));
+
+
+};
+
+const onDownloadFileChange= async (e: any) => {
+
+
+
+
+    const file: File = e.target?.files[0];
+    if (!file) {
+        return;
+    }
+   
+    log(`已选择download文件: ${file.name}`);
+
+
+    channel.postMessage(getVedioFileData(file, true));
 
 
 };
@@ -105,7 +136,37 @@ const playVideo = (virtualUrl: string) => {
 
 };
 
+const triggerVirtualDownload = (url:string)=> {
+    const timeout = 5000;
+  // 1. 创建 iframe
+  const iframe = document.createElement('iframe');
+  
+  // 2. 隐藏 iframe (使用绝对定位移出屏幕，比 display: none 更安全，兼容某些老旧浏览器)
+  iframe.style.position = 'absolute';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '-9999px';
 
+  // 3. 将 iframe 挂载到 body (脱离 Vue 组件的生命周期控制)
+  document.body.appendChild(iframe);
+
+  // 4. 触发请求
+  // 注意：赋值 src 后，浏览器会立刻发起对该 URL 的 GET 请求
+  iframe.src = url;
+
+  // 5. 垃圾回收清理
+  // 因为响应头是 Content-Disposition: attachment，浏览器不会触发 iframe 的 onload 事件
+  // 所以我们只能用一个合理的定时器来清理 DOM。5秒足够浏览器底层接管流式下载了。
+  setTimeout(() => {
+    if (document.body.contains(iframe)) {
+      document.body.removeChild(iframe);
+      // 释放 iframe 的 src 内存
+      iframe.src = 'about:blank';
+    }
+  }, timeout);
+}
 
 </script>
 
@@ -123,8 +184,8 @@ const playVideo = (virtualUrl: string) => {
             <h2>▶️ 播放加密文件</h2>
             <p>选择按位取反的混淆文件，浏览器将边解密边播放。</p>
             <input type="file" @change="onFileEleChange">
-            <span>-------------------------</span>
-           
+            <span>-----left play or right download----</span>
+            <input type="file" @change="onDownloadFileChange">
             <video v-if="video_virtualUrl !== ''" :src="video_virtualUrl" controls playsinline autoplay
                 @error="(e) => on_Error(e, 'video error')"></video>
         </div>

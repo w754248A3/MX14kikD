@@ -1,5 +1,5 @@
 import { registerRoute } from 'workbox-routing'
-import { CHANNEL_NAME, type DATA } from "@/tools/streaming_decryption_player/type"
+import { CHANNEL_NAME, VIRTUAL_URL_PATH, type DATA, type VIRTUAL_URL_SEARCH } from "@/tools/streaming_decryption_player/type"
 
 export function initSwInterceptor() {
 
@@ -22,6 +22,9 @@ export function initSwInterceptor() {
                 virtualUrl: currentFileData.virtualUrl
             } as DATA);
         }
+        else{
+            log("error message from ui");
+        }
     };
 
     const log = (mes: string) => {
@@ -35,31 +38,51 @@ export function initSwInterceptor() {
 
 
     // 3. 处理视频流请求
-    async function handleVideoRequest(request: Request, currentFile: File) {
+    async function handleVideoRequest(request: Request, currentFile: File, urlSearch:VIRTUAL_URL_SEARCH) {
         if (!currentFile) {
-            console.log("File not selected");
+            log("File not selected");
             return new Response("File not selected", { status: 404 });
         }
+        
+        const url = new URL(request.url);
+
+        const search = url.searchParams;
+
+        if(search.get("t") !== urlSearch.t || search.get("id") !== urlSearch.id){
+            log("search error");
+            return new Response("search error", { status: 404 });
+        }
+        
         const filename = currentFile.name;
-        const filetype = currentFile.type || "video/mp4";
+        const filetype = currentFile.type || "application/octet-stream";
 
         log(`[SW] filename${filename} filetype${filetype}`);
 
         const fileSize = currentFile.size;
         const rangeHeader = request.headers.get('Range');
 
+        const headers = new Headers();
+
         // 解析 Range 头 (例如: bytes=0-1048575)
         // 视频播放器通常会分段请求，而不是一次请求所有
         let start = 0;
         let end = fileSize - 1;
 
+        let status=200;
+
         if (rangeHeader) {
+            
             const parts = rangeHeader.replace(/bytes=/, "").split("-");
             start = parseInt(parts[0] as string, 10);
             if (parts[1]) {
                 end = parseInt(parts[1], 10);
             }
+
+            status=206;
+            headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+            headers.set('Accept-Ranges','bytes');
         }
+      
 
         // 计算 Content-Length
         const chunkSize = end - start + 1;
@@ -83,17 +106,25 @@ export function initSwInterceptor() {
             }
         });
 
-        // 6. 返回 206 Partial Content
+        
+        headers.set('Content-Length', chunkSize.toString());
+
+        headers.set('Content-Type', filetype);
+
+        if(urlSearch.d){
+            headers.set("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
+        
+            headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            headers.set("Pragma", "no-cache");
+            headers.set("Expires", "0");
+        }
+
+
+        
         // 浏览器会认为这是一个普通的网络视频流
         return new Response(originalStream.pipeThrough(decryptStream), {
-            status: 206,
-            headers: {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunkSize.toString(),
-                'Content-Type': filetype,
-                //'Content-Disposition': `attachment; filename="${filename}"`,
-            }
+            status: status,
+            headers: headers
         });
     }
 
@@ -107,17 +138,17 @@ export function initSwInterceptor() {
     // Intercept requests to the virtual path
     registerRoute(
         ({ url }) => {
-            const b = currentFileData && currentFileData.virtualUrl && url.href.endsWith(currentFileData.virtualUrl);
+            const b = currentFileData && currentFileData.virtualUrl && url.pathname.endsWith(VIRTUAL_URL_PATH);
            
             if(b){
                 log(`[SW] sw run ${url.href}`);
             }
             return b;
         },
-        ({ request }) => {
+        ({ request}) => {
 
             if (currentFileData?.file) {
-                return handleVideoRequest(request, currentFileData.file);
+                return handleVideoRequest(request, currentFileData.file, currentFileData.virtualUrl);
             }
             else {
 
