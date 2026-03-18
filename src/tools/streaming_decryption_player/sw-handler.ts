@@ -22,9 +22,7 @@ export function initSwInterceptor() {
                 virtualUrl: currentFileData.virtualUrl
             } as DATA);
         }
-        else{
-            log("error message from ui");
-        }
+        
     };
 
     const log = (mes: string) => {

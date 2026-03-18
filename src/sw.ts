@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
-import { registerRoute } from 'workbox-routing'
+import { cleanupOutdatedCaches, precacheAndRoute} from 'workbox-precaching'
 import { clientsClaim } from 'workbox-core'
+import { registerRoute } from 'workbox-routing'
 import { initSwInterceptor } from '@/tools/sw-interceptor/sw-handler'
 import { initSwInterceptor as init_streaming_decryption_player} from '@/tools/streaming_decryption_player/sw-handler'
 
@@ -9,16 +9,17 @@ import { initSwInterceptor as init_streaming_decryption_player} from '@/tools/st
 
 declare let self: ServiceWorkerGlobalScope
 
-// 自动跳过等待，让新 Service Worker 立即激活
-self.skipWaiting()
-// 让新 Service Worker 立即接管页面
-clientsClaim()
+cleanupOutdatedCaches(); // 清理
+precacheAndRoute(self.__WB_MANIFEST); // 缓存
+clientsClaim(); // 接管
 
-// 清理过期缓存
-cleanupOutdatedCaches()
-
-// 预缓存由 Vite 构建生成的资源
-precacheAndRoute(self.__WB_MANIFEST)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log("SKIP_WAITING");
+    self.skipWaiting();
+  }
+});
+console.log("PWA RUN ");
 
 // 拦截 /test 路径并返回 "hello world"
 registerRoute(
